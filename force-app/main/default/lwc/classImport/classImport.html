@@ -1,0 +1,213 @@
+<template>
+    <lightning-card>
+        <div class="slds-p-around_medium">
+            <!-- Progress Indicator -->
+            <lightning-progress-indicator current-step={currentStep} type="base" variant="base">
+                <lightning-progress-step label="Upload File" value="upload"></lightning-progress-step>
+                <lightning-progress-step label="Map Fields" value="mapping"></lightning-progress-step>
+                <lightning-progress-step label="Import Classes" value="processing"></lightning-progress-step>
+                <lightning-progress-step label="Import Summary" value="summary"></lightning-progress-step>
+            </lightning-progress-indicator>
+
+            <!-- Upload Step -->
+            <template lwc:if={isUploadStep}>
+                <div class="slds-m-top_large">
+                    <lightning-input 
+                        type="file" 
+                        label="Select CSV File"
+                        accept=".csv"
+                        onchange={handleFileUpload}
+                        required>
+                    </lightning-input>
+                    
+                    <template lwc:if={uploadedFileName}>
+                        <div class="slds-m-top_small">
+                            <p><strong>Selected file:</strong> {uploadedFileName}</p>
+                        </div>
+                    </template>
+                    
+                    <div class="slds-box slds-theme_shade slds-m-top_medium slds-text-body_small">
+                        <h3 class="slds-text-heading_small slds-m-bottom_small">Expected CSV Format</h3>
+                        <p class="slds-m-bottom_small">Your CSV should contain the following columns (in any order):</p>
+                        <ul class="slds-list_dotted slds-m-left_medium">
+                            <li><strong>Class Name</strong> - Unique name of the Class</li>
+                            <li><strong>Duration (Minutes)</strong> - How long the Class is</li>
+                            <li><strong>Pricing Plan</strong></li>
+                            <li><strong>Pricing Input Type</strong></li>
+                            <li><strong>Static Payout Rate</strong></li>
+                            <li><strong>Custom Pricing Plan</strong></li>
+                            <li><strong>Custom Dynamic Ceiling</strong></li>
+                            <li><strong>Custom Static Rate</strong></li>
+                        </ul>
+                    </div>
+                </div>
+            </template>
+            
+            <!-- Field Mapping Step -->
+            <template lwc:if={isMappingStep}>
+                <div class="slds-m-top_large">
+                    <div class="slds-grid slds-gutters slds-m-bottom_small">
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-text-heading_small">Map CSV Columns to Class Fields</div>
+                            <p class="slds-text-body_small slds-m-top_x-small">
+                                Match each Class field with its corresponding CSV column. Use auto-match for quick mapping or manually select columns as needed.
+                            </p>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 slds-text-align_right slds-grid slds-grid_vertical-align-end">
+                            <div>
+                                <lightning-button 
+                                    label="Auto-Match Fields" 
+                                    variant="brand" 
+                                    onclick={handleAutoMatch}
+                                    class="slds-m-right_x-small"
+                                    disabled={isMappingNextDisabled}>
+                                </lightning-button>
+                                <!-- <lightning-button 
+                                    label="Save Mapping" 
+                                    variant="success" 
+                                    onclick={handleSaveMapping}
+                                    disabled={isMappingNextDisabled}>
+                                </lightning-button> -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Debug Information -->
+                    <div class="slds-box slds-theme_info slds-m-bottom_medium">
+                        <p><strong>Debug Info:</strong> Available Fields: {debugInfo.availableFields}, CSV Headers: {debugInfo.csvHeaders}, Mapping Items: {debugInfo.fieldMappingItems}</p>
+                    </div>
+                    
+                    <!-- Show loading or field mapping table -->
+                    <template lwc:if={hasFieldMappingItems}>
+                        <lightning-datatable
+                            key-field="apiName"
+                            data={fieldMappingItems}
+                            columns={mappingColumns}
+                            hide-checkbox-column
+                            onrowaction={handleMappingAction}
+                            oncellchange={handleCellChange}
+                            draft-values={draftValues}
+                            suppress-bottom-bar>
+                        </lightning-datatable>
+                    </template>
+                    
+                    <template if:false={hasFieldMappingItems}>
+                        <div class="slds-box slds-theme_warning slds-text-align_center">
+                            <p><strong>Loading field mappings...</strong></p>
+                            <p>If this persists, please check that:</p>
+                            <ul class="slds-list_dotted slds-m-left_medium">
+                                <li>Your CSV file has been uploaded successfully</li>
+                                <li>The Class object has the required custom fields</li>
+                                <li>You have the necessary permissions to access field metadata</li>
+                            </ul>
+                            <lightning-button 
+                                label="Retry Loading Fields" 
+                                variant="brand" 
+                                onclick={loadAvailableFields}
+                                class="slds-m-top_medium">
+                            </lightning-button>
+                        </div>
+                    </template>
+                    
+                    <div class="slds-box slds-theme_shade slds-m-top_medium slds-text-body_small">
+                        <h3 class="slds-text-heading_small slds-m-bottom_small">Mapping Instructions</h3>
+                        <ul class="slds-list_dotted">
+                            <li><strong>N/A Selection:</strong> Select "-- N/A --" to skip importing data for a field.</li>
+                            <li><strong>Auto-Match:</strong> Automatically matches Class field names to similar CSV columns.</li>
+                            <li><strong>Manual Mapping:</strong> Use the columns to manually select the appropriate CSV column for each field.</li>
+                            <li><strong>Key Fields:</strong> Ensure all required fields are mapped.</li>
+                        </ul>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Processing Step -->
+            <template lwc:if={isProcessingStep}>
+                <div class="slds-m-top_large">
+                    <template lwc:if={isProcessing}>
+                        <div class="slds-text-align_center">
+                            <lightning-spinner alternative-text="Processing" size="large"></lightning-spinner>
+                            <p class="slds-m-top_medium">Processing Class import...</p>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            
+            <!-- Summary Step -->
+            <template lwc:if={isSummaryStep}>
+                <div class="slds-m-top_large">
+                    <template lwc:if={importResults}>
+                        <div class="slds-box">
+                            <h3 class="slds-text-heading_small slds-m-bottom_medium">Import Summary</h3>
+                            
+                            <div class="slds-grid slds-gutters">
+                                <div class="slds-col">
+                                    <p><strong>Status: </strong> 
+                                        <span class={statusClass}>
+                                            {statusText}
+                                        </span>
+                                    </p>
+                                    <p><strong>Total # of Records Processed:</strong> {importResults.totalRows}</p>
+                                    <p><strong>Successfully Imported Records:</strong> {importResults.successRows}</p>
+                                    <p><strong>Failed Records:</strong> {importResults.failedRows}</p>
+                                    <p><strong>Processing Time:</strong> {importResults.processedDateTime}</p>
+                                </div>
+                            </div>
+
+                            <template lwc:if={importResults.errors}>
+                                <div class="slds-m-top_medium">
+                                    <h4 class="slds-text-heading_small slds-m-bottom_small">Errors</h4>
+                                    <div class="slds-box slds-theme_shade">
+                                        <ul class="slds-list_dotted">
+                                            <template for:each={importResults.errors} for:item="error">
+                                                <li key={error}>{error}</li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Footer Buttons -->
+        <lightning-layout slot="footer" horizontal-align="spread">
+            <lightning-layout-item>
+                <template lwc:if={showPreviousButton}>
+                    <lightning-button 
+                        label="Previous" 
+                        onclick={handlePrevious}
+                        disabled={isProcessing}>
+                    </lightning-button>
+                </template>
+            </lightning-layout-item>
+            <lightning-layout-item>
+                <template lwc:if={isUploadStep}>
+                    <lightning-button 
+                        label="Next" 
+                        variant="brand" 
+                        onclick={handleNext}
+                        disabled={isUploadNextDisabled}>
+                    </lightning-button>
+                </template>
+                <template lwc:if={isMappingStep}>
+                    <lightning-button 
+                        label="Import Classes" 
+                        variant="brand" 
+                        onclick={handleNext}
+                        disabled={isMappingNextDisabled}>
+                    </lightning-button>
+                </template>
+                <template if:true={isSummaryStep}>
+                    <lightning-button 
+                        label="Close" 
+                        variant="brand" 
+                        onclick={handleFinish}>
+                    </lightning-button>
+                </template>
+            </lightning-layout-item>
+        </lightning-layout>
+    </lightning-card>
+</template>
