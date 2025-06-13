@@ -137,7 +137,7 @@ public with sharing class CSVRecordImportController {
             
         } catch (Exception e) {
             Database.rollback(sp);
-            throw new AuraHandledException('Error processing LAT import: ' + e.getMessage());
+            throw new AuraHandledException('Error processing record import: ' + e.getMessage());
         }
         
         return result;

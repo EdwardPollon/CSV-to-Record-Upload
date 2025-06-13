@@ -257,7 +257,7 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
             
             this.currentStep = 'mapping';
         } else if (this.currentStep === 'mapping') {
-            // Import the LAT
+            // Import the records
             this.currentStep = 'processing';
             this.processRecordImport();
         }
