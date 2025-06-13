@@ -15,8 +15,7 @@ public with sharing class CSVRecordImportController {
             cv.FirstPublishLocationId = parentId; // Attach to the Opportunity
             insert cv;
             
-            // Process CSV rows and create Class records
-            //List<Class__c> classes = new List<Class__c>();
+            // Process CSV rows and create records
             List<SObject> objectsToInsert = new List<SObject>();
             List<String> errors = new List<String>();
             Integer successCount = 0;
@@ -53,13 +52,11 @@ public with sharing class CSVRecordImportController {
                     if (obj == null) {
                         throw new AuraHandledException('Invalid object type: ' + objectToCreate);
                     }
-                    //Class__c cl = new Class__c();
                     
                     // Store the entire row data as JSON in the Row_JSON__c field
                     try {
                         String jsonData = JSON.serialize(row);
                         obj.put('Row_JSON__c', jsonData);
-                        //cl.Row_JSON__c = jsonData;
                         System.debug('Row data stored as JSON: ' + jsonData.left(100) + '...');
                     } catch (Exception e) {
                         System.debug('Error serializing row to JSON: ' + e.getMessage());
@@ -67,7 +64,6 @@ public with sharing class CSVRecordImportController {
                     
                     // Map CSV columns to record fields using the field mapping
                     obj.put(parentField, parentId);
-                    //cl.Opportunity__c = parentId;
                     
                     System.debug('============ PROCESSING ROW ============');
                     System.debug('Field mapping received: ' + JSON.serialize(fieldMapping));
@@ -413,13 +409,13 @@ public with sharing class CSVRecordImportController {
         List<FieldInfo> result = new List<FieldInfo>();
         
         try {
-            // Get fields from the Class__c object
+            // Get fields from the object to be created during import
             Map<String, Schema.SObjectField> fieldMap = Schema.getGlobalDescribe().get(objectToCreate).getDescribe().fields.getMap();
             
             // Get only the target fields we want to show
             Set<String> targetFields = getTargetFieldApiNames(mappingMetadataObject);
             
-            System.debug('Available fields in Class__c: ' + fieldMap.keySet());
+            System.debug('Available fields for ' + objectToCreate + ': ' + fieldMap.keySet());
             System.debug('Target fields we are looking for: ' + targetFields);
             
             // Include only our target fields that actually exist on the object
@@ -445,7 +441,7 @@ public with sharing class CSVRecordImportController {
             System.debug('Total fields returned: ' + result.size());
             
             if (result.isEmpty()) {
-                throw new AuraHandledException('No target fields found on CLass__c object. Please ensure the required custom fields exist.');
+                throw new AuraHandledException('No target fields found for the ' + objectToCreate + ' object. Please ensure the required fields exist.');
             }
             
         } catch (Exception e) {

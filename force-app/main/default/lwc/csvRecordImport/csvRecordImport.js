@@ -13,20 +13,18 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
     @api maxRecords;
     @api objectToCreate;
     @api mappingMetadataObject;
-    @track showPreviousButton = false;
-    @track currentStep = 'upload';
-    @track uploadedFileName = '';
-    @track fileContent = '';
-    @track isProcessing = false;
-    @track isProcessingLAT = false;
-    @track importResults = null;
-    @track processingResults = null;
-    @track availableFields = [];
-    @track csvHeaders = [];
-    @track fieldMapping = {};
-    @track fieldMappingItems = [];
-    @track draftValues = [];
-    @track defaultFieldMapping = {}; // Store the default mapping from Apex
+    showPreviousButton = false;
+    currentStep = 'upload';
+    uploadedFileName = '';
+    fileContent = '';
+    isProcessing = false;
+    importResults = null;
+    availableFields = [];
+    csvHeaders = [];
+    fieldMapping = {};
+    fieldMappingItems = [];
+    draftValues = [];
+    defaultFieldMapping = {}; // Store the default mapping from Apex
     
     // Constants
     MAX_FILE_SIZE = 10485760; // 10MB
@@ -185,10 +183,6 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         return this.fieldMappingItems && this.fieldMappingItems.length > 0;
     }
 
-    get hasProcessingErrors() {
-        return this.processingResults && this.processingResults.errors && this.processingResults.errors.length > 0;
-    }
-
     get debugInfo() {
         return {
             availableFields: this.availableFields ? this.availableFields.length : 0,
@@ -328,7 +322,7 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
             const updatedMapping = { ...this.fieldMapping };
             
             if (newMappedValue === 'N/A' || newMappedValue === null || newMappedValue === '') {
-                // If N/A is selected or value is empty, remove from mapping entirely
+                // If N/A is selected or the value is empty, remove from mapping entirely
                 delete updatedMapping[fieldApiName];
                 console.log(`Removed mapping for ${fieldApiName}`);
             } else {
@@ -356,35 +350,6 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         this.showToast('Success', 'Field mapping updated', 'success');
         
         console.log('Final field mapping after cell change:', this.fieldMapping);
-    }
-
-    // Alternative handler for direct combobox changes (if cell change doesn't work)
-    handleComboboxChange(event) {
-        const fieldApiName = event.target.dataset.fieldName;
-        const newValue = event.detail.value;
-        
-        console.log(`Combobox change: ${fieldApiName} -> ${newValue}`);
-        
-        // Update the mapping
-        const updatedMapping = { ...this.fieldMapping };
-        
-        if (newValue === 'N/A' || newValue === null || newValue === '') {
-            delete updatedMapping[fieldApiName];
-        } else {
-            // Validate that the selected CSV column actually exists
-            if (this.csvHeaders && this.csvHeaders.includes(newValue)) {
-                updatedMapping[fieldApiName] = newValue;
-            } else {
-                console.log(`Warning: CSV column ${newValue} not found in headers`);
-                this.showToast('Warning', `CSV column "${newValue}" not found in uploaded file`, 'warning');
-                return;
-            }
-        }
-        
-        this.fieldMapping = updatedMapping;
-        this.updateFieldMappingItems();
-        
-        console.log('Updated field mapping via combobox:', this.fieldMapping);
     }
 
     handleAutoMatch() {
