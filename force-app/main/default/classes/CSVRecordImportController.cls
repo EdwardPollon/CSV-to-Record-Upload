@@ -1,4 +1,4 @@
-public with sharing class ClassImportController {
+public with sharing class CSVRecordImportController {
     
     @AuraEnabled
     public static ImportResult processRecordImport(Id parentId, String parentField, String objectToCreate, String mappingMetadataObject, String csvContent, String fileName, List<Map<String, String>> csvRows, Map<String, String> fieldMapping) {

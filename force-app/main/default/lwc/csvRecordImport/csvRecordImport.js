@@ -2,12 +2,12 @@ import { LightningElement, api, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
 import { CloseActionScreenEvent } from 'lightning/actions';
-import processRecordImport from '@salesforce/apex/ClassImportController.processRecordImport';
-import getAvailableFields from '@salesforce/apex/ClassImportController.getAvailableFields';
-import getDefaultFieldMapping from '@salesforce/apex/ClassImportController.getDefaultFieldMapping';
-import getTargetFieldMappings from '@salesforce/apex/ClassImportController.getTargetFieldMappings';
+import processRecordImport from '@salesforce/apex/CSVRecordImportController.processRecordImport';
+import getAvailableFields from '@salesforce/apex/CSVRecordImportController.getAvailableFields';
+import getDefaultFieldMapping from '@salesforce/apex/CSVRecordImportController.getDefaultFieldMapping';
+import getTargetFieldMappings from '@salesforce/apex/CSVRecordImportController.getTargetFieldMappings';
 
-export default class RecordImportFromCSV extends NavigationMixin(LightningElement) {
+export default class CSVRecordImport extends NavigationMixin(LightningElement) {
     @api recordId;
     @api parentFieldReference;
     @api maxRecords;

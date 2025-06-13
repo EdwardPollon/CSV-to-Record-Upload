@@ -86,7 +86,7 @@
                         </lightning-datatable>
                     </template>
                     
-                    <template if:false={hasFieldMappingItems}>
+                    <template lwc:else>
                         <div class="slds-box slds-theme_warning slds-text-align_center">
                             <p><strong>Loading field mappings...</strong></p>
                             <p>If this persists, please check that:</p>
@@ -122,7 +122,7 @@
                     <template lwc:if={isProcessing}>
                         <div class="slds-text-align_center">
                             <lightning-spinner alternative-text="Processing" size="large"></lightning-spinner>
-                            <p class="slds-m-top_medium">Processing Class import...</p>
+                            <p class="slds-m-top_medium">Processing import...</p>
                         </div>
                     </template>
                 </div>
@@ -137,11 +137,11 @@
                             
                             <div class="slds-grid slds-gutters">
                                 <div class="slds-col">
-                                    <p><strong>Status: </strong> 
+                                    <p><strong>Status: 
                                         <span class={statusClass}>
                                             {statusText}
                                         </span>
-                                    </p>
+                                    </strong></p>
                                     <p><strong>Total # of Records Processed:</strong> {importResults.totalRows}</p>
                                     <p><strong>Successfully Imported Records:</strong> {importResults.successRows}</p>
                                     <p><strong>Failed Records:</strong> {importResults.failedRows}</p>
