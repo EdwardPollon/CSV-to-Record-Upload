@@ -49,9 +49,6 @@ public with sharing class CSVRecordImportController {
                 try {
                     Map<String, String> row = csvRows[i];
                     SObject obj = Schema.getGlobalDescribe().get(objectToCreate).newSObject();
-                    if (obj == null) {
-                        throw new AuraHandledException('Invalid object type: ' + objectToCreate);
-                    }
                     
                     // Store the entire row data as JSON in the Row_JSON__c field
                     try {
@@ -103,7 +100,11 @@ public with sharing class CSVRecordImportController {
                     
                     objectsToInsert.add(obj);
                     successCount++;
-                } catch (Exception e) {
+                } 
+                catch (NullPointerException e) {
+                    throw new AuraHandledException('Null pointer exception while processing row ' + (i + 2) + ': ' + e.getMessage());
+                }
+                catch (Exception e) {
                     failCount++;
                     errors.add('Row ' + (i + 2) + ': ' + e.getMessage());
                 }
@@ -291,58 +292,62 @@ public with sharing class CSVRecordImportController {
                 return;
             }
             
-            if (fieldType == Schema.DisplayType.DATE) {
-                // Try to parse date value
-                try {
-                    Date dateValue;
-                    try {
-                        // Try standard Salesforce format YYYY-MM-DD
-                        dateValue = Date.valueOf(value);
-                        System.debug('Date parsed using valueOf: ' + dateValue);
-                    } catch (Exception e1) {
-                        System.debug('valueOf parse failed: ' + e1.getMessage());
-                        try {
-                            // Try MM/DD/YYYY
-                            String[] parts = value.split('/');
-                            System.debug('Date parts: ' + parts);
-                            if (parts.size() == 3) {
-                                Integer month = Integer.valueOf(parts[0]);
-                                Integer day = Integer.valueOf(parts[1]);
-                                Integer year = Integer.valueOf(parts[2]);
-                                dateValue = Date.newInstance(year, month, day);
-                                System.debug('Date parsed using MM/DD/YYYY: ' + dateValue);
-                            }
-                        } catch (Exception e2) {
-                            System.debug('MM/DD/YYYY parse failed: ' + e2.getMessage());
-                            try {
-                                // Try DD/MM/YYYY
-                                String[] parts = value.split('/');
-                                if (parts.size() == 3) {
-                                    Integer day = Integer.valueOf(parts[0]);
-                                    Integer month = Integer.valueOf(parts[1]);
-                                    Integer year = Integer.valueOf(parts[2]);
-                                    dateValue = Date.newInstance(year, month, day);
-                                    System.debug('Date parsed using DD/MM/YYYY: ' + dateValue);
-                                }
-                            } catch (Exception e3) {
-                                System.debug('DD/MM/YYYY parse failed: ' + e3.getMessage());
-                                System.debug('All date parsing attempts failed for: ' + value);
-                                return;
-                            }
-                        }
-                    }
-                    record.put(fieldName, dateValue);
-                    System.debug('Date field set: ' + fieldName + ' = ' + dateValue);
-                } catch (Exception e) {
-                    System.debug('Final date parsing exception: ' + e.getMessage());
-                }
-            } else if (fieldType == Schema.DisplayType.BOOLEAN) {
-                // Handle boolean values
-                String normalizedValue = value.toLowerCase().trim();
-                Boolean boolValue = (normalizedValue == 'true' || normalizedValue == 'yes' || normalizedValue == '1' || normalizedValue == 'y');
-                record.put(fieldName, boolValue);
-                System.debug('Boolean field set: ' + fieldName + ' = ' + boolValue);
-            } else if (fieldType == Schema.DisplayType.DOUBLE || fieldType == Schema.DisplayType.CURRENCY || 
+            // UNCOMMENT BELOW APPROPRIATELY TO HANDLE DATE, BOOLEAN, PHONE, or EMAIL FIELDS IN THE IMPORT.
+
+            // if (fieldType == Schema.DisplayType.DATE) {
+            //     // Try to parse date value
+            //     try {
+            //         Date dateValue;
+            //         try {
+            //             // Try standard Salesforce format YYYY-MM-DD
+            //             dateValue = Date.valueOf(value);
+            //             System.debug('Date parsed using valueOf: ' + dateValue);
+            //         } catch (Exception e1) {
+            //             System.debug('valueOf parse failed: ' + e1.getMessage());
+            //             try {
+            //                 // Try MM/DD/YYYY
+            //                 String[] parts = value.split('/');
+            //                 System.debug('Date parts: ' + parts);
+            //                 if (parts.size() == 3) {
+            //                     Integer month = Integer.valueOf(parts[0]);
+            //                     Integer day = Integer.valueOf(parts[1]);
+            //                     Integer year = Integer.valueOf(parts[2]);
+            //                     dateValue = Date.newInstance(year, month, day);
+            //                     System.debug('Date parsed using MM/DD/YYYY: ' + dateValue);
+            //                 }
+            //             } catch (Exception e2) {
+            //                 System.debug('MM/DD/YYYY parse failed: ' + e2.getMessage());
+            //                 try {
+            //                     // Try DD/MM/YYYY
+            //                     String[] parts = value.split('/');
+            //                     if (parts.size() == 3) {
+            //                         Integer day = Integer.valueOf(parts[0]);
+            //                         Integer month = Integer.valueOf(parts[1]);
+            //                         Integer year = Integer.valueOf(parts[2]);
+            //                         dateValue = Date.newInstance(year, month, day);
+            //                         System.debug('Date parsed using DD/MM/YYYY: ' + dateValue);
+            //                     }
+            //                 } catch (Exception e3) {
+            //                     System.debug('DD/MM/YYYY parse failed: ' + e3.getMessage());
+            //                     System.debug('All date parsing attempts failed for: ' + value);
+            //                     return;
+            //                 }
+            //             }
+            //         }
+            //         record.put(fieldName, dateValue);
+            //         System.debug('Date field set: ' + fieldName + ' = ' + dateValue);
+            //     } catch (Exception e) {
+            //         System.debug('Final date parsing exception: ' + e.getMessage());
+            //     }
+            // } 
+            // else if (fieldType == Schema.DisplayType.BOOLEAN) {
+            //     // Handle boolean values
+            //     String normalizedValue = value.toLowerCase().trim();
+            //     Boolean boolValue = (normalizedValue == 'true' || normalizedValue == 'yes' || normalizedValue == '1' || normalizedValue == 'y');
+            //     record.put(fieldName, boolValue);
+            //     System.debug('Boolean field set: ' + fieldName + ' = ' + boolValue);
+            // } 
+            else if (fieldType == Schema.DisplayType.DOUBLE || fieldType == Schema.DisplayType.CURRENCY || 
                        fieldType == Schema.DisplayType.PERCENT || fieldType == Schema.DisplayType.INTEGER) {
                 // Handle numeric types
                 try {
@@ -357,16 +362,19 @@ public with sharing class CSVRecordImportController {
                 } catch (Exception e) {
                     System.debug('Numeric parsing failed: ' + e.getMessage());
                 }
-            } else if (fieldType == Schema.DisplayType.PHONE) {
-                // Specific handling for phone fields
-                String cleanPhone = value.replaceAll('[^0-9+\\-\\(\\)\\s]', '');
-                record.put(fieldName, cleanPhone);
-                System.debug('Phone field set: ' + fieldName + ' = ' + cleanPhone + ' (original: ' + value + ')');
-            } else if (fieldType == Schema.DisplayType.EMAIL) {
-                // Specific handling for email fields
-                record.put(fieldName, value.trim());
-                System.debug('Email field set: ' + fieldName + ' = ' + value.trim());
-            } else {
+            } 
+            // else if (fieldType == Schema.DisplayType.PHONE) {
+            //     // Specific handling for phone fields
+            //     String cleanPhone = value.replaceAll('[^0-9+\\-\\(\\)\\s]', '');
+            //     record.put(fieldName, cleanPhone);
+            //     System.debug('Phone field set: ' + fieldName + ' = ' + cleanPhone + ' (original: ' + value + ')');
+            // } 
+            // else if (fieldType == Schema.DisplayType.EMAIL) {
+            //     // Specific handling for email fields
+            //     record.put(fieldName, value.trim());
+            //     System.debug('Email field set: ' + fieldName + ' = ' + value.trim());
+            // } 
+            else {
                 // For text and other types, just set the value directly
                 record.put(fieldName, value);
                 System.debug('Text field set: ' + fieldName + ' = ' + value);
@@ -467,22 +475,5 @@ public with sharing class CSVRecordImportController {
         @AuraEnabled public String apiName;
         @AuraEnabled public String label;
         @AuraEnabled public String type;
-    }
-    
-    @AuraEnabled
-    public static Boolean saveFieldMapping(String mappingName, Map<String, String> fieldMapping) {
-        try {
-            // Save the field mapping in a custom metadata type or custom setting
-            // This is a placeholder for actual implementation
-            // In a real implementation, you would save this to a database
-            
-            System.debug('Saving field mapping: ' + mappingName);
-            System.debug('Field mapping data: ' + JSON.serialize(fieldMapping));
-            
-            return true;
-        } catch (Exception e) {
-            System.debug('Error saving field mapping: ' + e.getMessage());
-            throw new AuraHandledException('Error saving field mapping: ' + e.getMessage());
-        }
     }
 }
