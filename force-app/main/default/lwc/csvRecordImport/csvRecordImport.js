@@ -21,6 +21,7 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
     importResults = null;
     availableFields = [];
     csvHeaders = [];
+    directMappings = {}; // Store direct mappings from Custom Metadata retrieved from Apex
     fieldMapping = {};
     fieldMappingItems = [];
     draftValues = [];
@@ -102,9 +103,11 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         this.fieldMappingItems = this.availableFields.map(field => {
             // Only use existing mapping if the mapped column exists in the CSV headers
             let mappedTo = '';
+            console.log(`Processing field: ${field.label} (${field.apiName})`);
             
             if (this.fieldMapping[field.apiName]) {
                 const currentMapping = this.fieldMapping[field.apiName];
+                console.log(`Current mapping for ${field.apiName}: ${currentMapping}`);
                 // Check if the currently mapped column exists in CSV headers
                 if (this.csvHeaders && this.csvHeaders.includes(currentMapping)) {
                     mappedTo = currentMapping;
@@ -352,7 +355,7 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         console.log('Final field mapping after cell change:', this.fieldMapping);
     }
 
-    handleAutoMatch() {
+    async handleAutoMatch() {
         if (!this.csvHeaders || this.csvHeaders.length === 0) {
             this.showToast('Warning', 'Please upload a CSV file first before auto-matching', 'warning');
             return;
@@ -362,8 +365,8 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         const newMapping = {};
         const matchLog = [];
 
-        const directMappings = {};
-        getTargetFieldMappings({
+        //const directMappings = {};
+        await getTargetFieldMappings({
             mappingMetadataObject: this.mappingMetadataObject
         })
             .then(result => {
@@ -376,7 +379,7 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         
         // Also generate normalized versions of all direct mappings
         const normalizedDirectMappings = {};
-        for (const [fieldName, mappings] of Object.entries(directMappings)) {
+        for (const [fieldName, mappings] of Object.entries(this.directMappings)) {
             normalizedDirectMappings[fieldName] = mappings.map(mapping => 
                 mapping.trim().toLowerCase().replace(/[\s-]/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
             );
@@ -384,10 +387,13 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         
         // First try direct mappings using our comprehensive mapping table
         this.availableFields.forEach(field => {
-            if (directMappings[field.apiName]) { 
+            console.log('directMappings for field:', field.apiName, this.directMappings[field.apiName]);
+            if (this.directMappings[field.apiName]) { 
                 // Try exact matches from our mapping table
-                const possibleMatches = directMappings[field.apiName];
+                const possibleMatches = this.directMappings[field.apiName];
                 const normalizedPossibleMatches = normalizedDirectMappings[field.apiName];
+                console.log('possibleMatches for', field.apiName, possibleMatches);
+                console.log('normalizedPossibleMatches for', field.apiName, normalizedPossibleMatches);
                 
                 // Look for exact match in original headers - only check headers that actually exist
                 let foundMatch = null;
@@ -404,9 +410,11 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
                 // If not found, try with normalized headers
                 if (!foundMatch) {
                     for (const normalizedMatch of normalizedPossibleMatches) {
+                        console.log('Checking normalized match:', normalizedMatch);
                         // Try to find it in the normalized versions of the headers
                         const normalizedHeaderIndex = this.csvHeaders.findIndex(h => {
                             const normalized = h.trim().toLowerCase().replace(/[\s-]/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                            console.log(`Comparing normalized header "${normalized}" with "${normalizedMatch}"`);
                             return normalized === normalizedMatch;
                         });
                         if (normalizedHeaderIndex >= 0) {
@@ -563,32 +571,76 @@ export default class CSVRecordImport extends NavigationMixin(LightningElement) {
         }
     }
     
+    // parseCSV(csvContent) {
+    //     // Improved CSV parser - handles quoted values and commas within fields
+    //     const lines = csvContent.split('\n');
+    //     const headers = this.parseCSVLine(lines[0]);
+        
+    //     console.log('Original headers:', headers);
+        
+    //     const rows = [];
+
+    //     for (let i = 1; i < lines.length; i++) {
+    //         const line = lines[i].trim();
+    //         if (line) {
+    //             const values = this.parseCSVLine(line);
+    //             const row = {};
+    //             // Use original headers
+    //             headers.forEach((header, index) => {
+    //                 const value = index < values.length ? values[index] : '';
+    //                 const trimmedValue = value.trim();
+    //                 row[header] = trimmedValue;
+    //             });
+    //             rows.push(row);
+    //         }
+    //     }
+
+    //     return rows;
+    // }
+
     parseCSV(csvContent) {
-        // Improved CSV parser - handles quoted values and commas within fields
-        const lines = csvContent.split('\n');
-        const headers = this.parseCSVLine(lines[0]);
-        
-        console.log('Original headers:', headers);
-        
-        const rows = [];
+    const lines = [];
+    let currentLine = '';
+    const rawLines = csvContent.split(/\r\n|\n|\r/);
 
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line) {
-                const values = this.parseCSVLine(line);
-                const row = {};
-                // Use original headers
-                headers.forEach((header, index) => {
-                    const value = index < values.length ? values[index] : '';
-                    const trimmedValue = value.trim();
-                    row[header] = trimmedValue;
-                });
-                rows.push(row);
-            }
+    for (let i = 0; i < rawLines.length; i++) {
+        const line = rawLines[i];
+        currentLine += (currentLine ? '\n' : '') + line;
+
+        const quoteMatches = currentLine.match(/"/g);
+        const quoteCount = quoteMatches ? quoteMatches.length : 0;
+
+        if (quoteCount % 2 === 0) {
+            lines.push(currentLine);
+            currentLine = '';
         }
-
-        return rows;
     }
+
+    // Handle any remaining data
+    if (currentLine.trim() !== '') {
+        lines.push(currentLine);
+    }
+
+    const headers = this.parseCSVLine(lines[0]);
+    console.log('Original headers:', headers);
+    const rows = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line) {
+            const values = this.parseCSVLine(line);
+            const row = {};
+            headers.forEach((header, index) => {
+                const value = index < values.length ? values[index] : '';
+                row[header] = value.trim();
+            });
+            rows.push(row);
+        }
+    }
+
+    return rows;
+}
+
     
     parseCSVLine(line) {
         // Handle CSV line parsing with support for quoted values
