@@ -32,6 +32,10 @@ public class CSVRecordImportControllerTest {
         return 'Class Name,Drop In Rate,Duration (Minutes),F&B Genre,Percent Payout,Pricing Input Amount,Pricing Input Type,Pricing Plan,Static Payout Rate\ntest class,10,15,Pizza,5,10,Membership Price,Static,1';
     }
 
+    static String setCSVContent_HeaderOnly() {
+        return 'Class Name,Drop In Rate,Duration (Minutes),F&B Genre,Percent Payout,Pricing Input Amount,Pricing Input Type,Pricing Plan,Static Payout Rate';
+    }
+
     static Map<String, String> setCSVRow() {
         Map<String, String> row = new Map<String, String>{
             'Class Name' => 'test class',
@@ -115,42 +119,6 @@ public class CSVRecordImportControllerTest {
         Assert.areEqual(opp.Id, cvs[0].FirstPublishLocationId);
     }
 
-    // @isTest
-    // static void testProcessRecordImport_InvalidMapping() {
-    //     Opportunity opp = setupTestData();
-
-    //     String mappingMetadataObject = 'Class_Import_Field_Mapping__mdt';
-    //     //retrieveMappingMetadata(mappingMetadataObject);
-
-    //     String csvContent = setCSVContent();
-    //     List<Map<String, String>> csvRows = new List<Map<String, String>>();
-    //     csvRows.add(new Map<String, String>{'Test Column'=>'Value1','Another Column'=>'Value2'});
-
-    //     // Field mapping refers to a non-existent column
-    //     Map<String, String> fieldMapping = new Map<String, String>{
-    //         'Test_Field__c' => 'Nonexistent Column'
-    //     };
-
-    //     Test.startTest();
-    //     CSVRecordImportController.ImportResult result = CSVRecordImportController.processRecordImport(
-    //         opp.Id,
-    //         'Opportunity__c',
-    //         'Class__c',
-    //         mappingMetadataObject,
-    //         csvContent,
-    //         'test2.csv',
-    //         csvRows,
-    //         fieldMapping
-    //     );
-    //     Test.stopTest();
-
-    //     Assert.areEqual(true, result.success, 'Should still succeed (no required fields)');
-    //     Assert.areEqual(1, result.totalRows);
-    //     Assert.areEqual(1, result.successRows);
-    //     Assert.areEqual(0, result.failedRows);
-    //     Assert.areEqual(0, result.errors.size());
-    // }
-
     @isTest
     static void testProcessRecordImport_InvalidObject() {
         Opportunity opp = setupTestData();
@@ -183,37 +151,36 @@ public class CSVRecordImportControllerTest {
         Assert.isTrue(caught, 'Should throw AuraHandledException');
     }
 
-    // @isTest
-    // static void testProcessRecordImport_EmptyRows() {
-    //     Opportunity opp = setupTestData();
+    @isTest
+    static void testProcessRecordImport_EmptyRows() {
+        Opportunity opp = setupTestData();
 
-    //     String mappingMetadataObject = 'Class_Import_Field_Mapping__mdt';
-    //     //retrieveMappingMetadata(mappingMetadataObject);
+        String mappingMetadataObject = 'Class_Import_Field_Mapping__mdt';
 
-    //     String csvContent = '';
-    //     List<Map<String, String>> csvRows = new List<Map<String, String>>();
+        String csvContent = setCSVContent_HeaderOnly();
+        List<Map<String, String>> csvRows = new List<Map<String, String>>();
 
-    //     Map<String, String> fieldMapping = new Map<String, String>();
+        Map<String, String> fieldMapping = setFieldMapping();
 
-    //     Test.startTest();
-    //     CSVRecordImportController.ImportResult result = CSVRecordImportController.processRecordImport(
-    //         opp.Id,
-    //         'Opportunity__c',
-    //         'Class__c',
-    //         mappingMetadataObject,
-    //         csvContent,
-    //         'test4.csv',
-    //         csvRows,
-    //         fieldMapping
-    //     );
-    //     Test.stopTest();
+        Test.startTest();
+        CSVRecordImportController.ImportResult result = CSVRecordImportController.processRecordImport(
+            opp.Id,
+            'Opportunity__c',
+            'Class__c',
+            mappingMetadataObject,
+            csvContent,
+            'test4.csv',
+            csvRows,
+            fieldMapping
+        );
+        Test.stopTest();
 
-    //     Assert.areEqual(true, result.success, 'Should succeed with no rows');
-    //     Assert.areEqual(0, result.totalRows);
-    //     Assert.areEqual(0, result.successRows);
-    //     Assert.areEqual(0, result.failedRows);
-    //     Assert.areEqual(0, result.errors.size());
-    // }
+        Assert.areEqual(true, result.success, 'Should succeed with no rows');
+        Assert.areEqual(0, result.totalRows);
+        Assert.areEqual(0, result.successRows);
+        Assert.areEqual(0, result.failedRows);
+        Assert.areEqual(0, result.errors.size());
+    }
 
     @isTest
     static void testGetTargetFieldMappings() {
