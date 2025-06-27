@@ -124,7 +124,6 @@ public class CSVRecordImportControllerTest {
         Opportunity opp = setupTestData();
 
         String mappingMetadataObject = 'Class_Import_Field_Mapping__mdt';
-        //retrieveMappingMetadata(mappingMetadataObject);
 
         String csvContent = setCSVContent();
         List<Map<String, String>> csvRows = new List<Map<String, String>>();
@@ -185,7 +184,6 @@ public class CSVRecordImportControllerTest {
     @isTest
     static void testGetTargetFieldMappings() {
         String mappingMetadataObject = 'Class_Import_Field_Mapping__mdt';
-        //retrieveMappingMetadata(mappingMetadataObject);
 
         Test.startTest();
         Map<String, List<String>> mappings = CSVRecordImportController.getTargetFieldMappings(mappingMetadataObject);
@@ -198,7 +196,6 @@ public class CSVRecordImportControllerTest {
     @isTest
     static void testGetDefaultFieldMapping() {
         String mappingMetadataObject = 'Class_Import_Field_Mapping__mdt';
-        //(mappingMetadataObject);
 
         Test.startTest();
         Map<String, String> defaults = CSVRecordImportController.getDefaultFieldMapping(mappingMetadataObject);
@@ -211,7 +208,6 @@ public class CSVRecordImportControllerTest {
     @isTest
     static void testGetAvailableFields() {
         String mappingMetadataObject = 'Class_Import_Field_Mapping__mdt';
-        //retrieveMappingMetadata(mappingMetadataObject);
 
         Test.startTest();
         List<CSVRecordImportController.FieldInfo> fields = CSVRecordImportController.getAvailableFields('Class__c', mappingMetadataObject);
